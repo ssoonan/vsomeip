@@ -1,0 +1,1 @@
+env VSOMEIP_CONFIGURATION=config/vsomeip-udp-service.json VSOMEIP_APPLICATION_NAME=service-sample build/examples/response-sd

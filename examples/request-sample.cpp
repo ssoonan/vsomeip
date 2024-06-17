@@ -81,7 +81,7 @@ public:
 
         std::shared_ptr<vsomeip::payload> its_payload = vsomeip::runtime::get()->create_payload();
         std::vector<vsomeip::byte_t> its_payload_data;
-        for (std::size_t i = 0; i < 10; ++i)
+        for (std::size_t i = 0; i < 84; ++i)
             its_payload_data.push_back(vsomeip::byte_t(i % 256));
         its_payload->set_data(its_payload_data);
         request_->set_payload(its_payload);
@@ -177,6 +177,9 @@ public:
 
     void on_message(const std::shared_ptr<vsomeip::message> &_response)
     {
+        finished_time = std::chrono::high_resolution_clock::now();
+        auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(finished_time - started_time);
+        VSOMEIP_INFO << "TCP 통신 소요 시간: " << elapsed_ms.count() << "ms";
         std::cout << "Received a response from Service ["
                   << std::setfill('0') << std::hex
                   << std::setw(4) << _response->get_service()
@@ -212,6 +215,7 @@ public:
                     condition_.wait(its_lock);
                 if (is_available_)
                 {
+                    started_time = std::chrono::high_resolution_clock::now();
                     app_->send(request_);
                     std::cout << "Client/Session ["
                               << std::setfill('0') << std::hex
@@ -245,6 +249,8 @@ private:
     std::chrono::time_point<std::chrono::system_clock> current_time;
     std::chrono::time_point<std::chrono::steady_clock> start_time;
     std::chrono::time_point<std::chrono::steady_clock> end_time;
+    std::chrono::time_point<std::chrono::high_resolution_clock> started_time;
+    std::chrono::time_point<std::chrono::high_resolution_clock> finished_time;
 
     std::thread sender_;
 };
