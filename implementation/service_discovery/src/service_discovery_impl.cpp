@@ -3011,6 +3011,7 @@ service_discovery_impl::on_repetition_phase_timer_expired(
         const boost::system::error_code &_error,
         const std::shared_ptr<boost::asio::steady_timer>& _timer,
         std::uint8_t _repetition, std::uint32_t _last_delay) {
+    auto start_time = std::chrono::steady_clock::now();
     if (_error) {
         return;
     }
@@ -3054,6 +3055,9 @@ service_discovery_impl::on_repetition_phase_timer_expired(
 
             // Serialize and send
             send(its_messages);
+            auto end_time = std::chrono::steady_clock::now();
+            auto elapsed_ms = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
+            VSOMEIP_INFO << "send 소요 시간: " << elapsed_ms.count() << "μs";
             if (move_to_main) {
                 move_offers_into_main_phase(_timer);
                 return;

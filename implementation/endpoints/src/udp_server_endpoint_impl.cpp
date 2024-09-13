@@ -553,7 +553,7 @@ void udp_server_endpoint_impl::on_multicast_received(
         // 데이터를 다 처리한 이후 다시 receive_multicast로 이동, 무한 지속
         auto end_time = std::chrono::steady_clock::now();
         auto elapsed_ms = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-        VSOMEIP_INFO << "받은 쪽에서 처리 소요 시간: " << elapsed_ms.count() << "μs";
+        VSOMEIP_INFO << "receive 소요 시간: " << elapsed_ms.count() << "μs";
         receive_multicast(_multicast_id);
     }
 }
