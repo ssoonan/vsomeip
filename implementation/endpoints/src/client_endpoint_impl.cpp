@@ -176,7 +176,7 @@ bool client_endpoint_impl<Protocol>::send_error(
     return false;
 }
 
-
+// 이게 client의 send라 보면 되겠다.
 template<typename Protocol>
 bool client_endpoint_impl<Protocol>::send(const uint8_t *_data, uint32_t _size) {
 

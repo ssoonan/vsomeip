@@ -455,7 +455,7 @@ bool routing_manager_impl::offer_service(client_t _client,
             pending_sd_offers_.push_back(std::make_pair(_service, _instance));
         }
     }
-
+    // 이건 언제 갱신되는지? 그리고 애초에 offer_service인데 왜 find_service가 들어가지? 이 때는 들어가있으면 안 되지 않나?
     if (discovery_) {
         std::shared_ptr<serviceinfo> its_info = find_service(_service, _instance);
         if (its_info) {
@@ -581,7 +581,7 @@ void routing_manager_impl::request_service(client_t _client, service_t _service,
 
     routing_manager_base::request_service(_client,
             _service, _instance, _major, _minor);
-
+    // 대체 언제 이게 갱신된다고~?
     auto its_info = find_service(_service, _instance);
     if (!its_info) {
         add_requested_service(_client, _service, _instance, _major, _minor);
@@ -859,13 +859,13 @@ void routing_manager_impl::unsubscribe(
         VSOMEIP_ERROR<< "SOME/IP eventgroups require SD to be enabled!";
     }
 }
-
+// service_discovery에서 여기로 이어짐
 bool routing_manager_impl::send(client_t _client,
         std::shared_ptr<message> _message, bool _force) {
 
     return routing_manager_base::send(_client, _message, _force);
 }
-
+// 실제 send는 여기서 인 듯 하다
 bool routing_manager_impl::send(client_t _client, const byte_t *_data,
         length_t _size, instance_t _instance, bool _reliable,
         client_t _bound_client, const vsomeip_sec_client_t *_sec_client,
@@ -958,6 +958,7 @@ bool routing_manager_impl::send(client_t _client, const byte_t *_data,
 #endif
                     }
                 }
+                // request, client일 때가 여기 같은데?
                 if (is_request) {
                     its_target = ep_mgr_impl_->find_or_create_remote_client(
                             its_service, _instance, _reliable);
@@ -982,6 +983,7 @@ bool routing_manager_impl::send(client_t _client, const byte_t *_data,
                                 << std::setw(4) << its_session;
                     }
                 } else {
+                    // 여기서 response, server일 때 처리
                     std::shared_ptr<serviceinfo> its_info(find_service(its_service, _instance));
                     if (its_info || is_service_discovery) {
                         if (is_notification && !is_service_discovery) {
@@ -1322,6 +1324,7 @@ void routing_manager_impl::notify_one(service_t _service, instance_t _instance,
     }
 }
 
+// available 정보를 service discovery에 넣는 느낌?
 void routing_manager_impl::on_availability(service_t _service, instance_t _instance,
         availability_state_e _state, major_version_t _major, minor_version_t _minor) {
     // insert subscriptions of routing manager into service discovery
@@ -1508,6 +1511,7 @@ void routing_manager_impl::on_message(const byte_t *_data, length_t _size,
                         if(!is_acl_message_allowed(_receiver, its_service, ANY_INSTANCE, _remote_address)) {
                             return;
                         }
+                        // 여기서 service_discovery의 on_message가 감
                         discovery_->on_message(_data, _size, _remote_address, _is_multicast);
                     } else {
                         VSOMEIP_ERROR << "Ignored SD message from unknown address.";
@@ -1644,7 +1648,7 @@ void routing_manager_impl::on_message(const byte_t *_data, length_t _size,
     }
 #endif
 }
-
+// 위에랑 뭐가 다른 거야? 인자만 다른 오버라이드이긴 함
 bool routing_manager_impl::on_message(service_t _service, instance_t _instance,
         const byte_t *_data, length_t _size, bool _reliable,
         client_t _bound_client, const vsomeip_sec_client_t *_sec_client,

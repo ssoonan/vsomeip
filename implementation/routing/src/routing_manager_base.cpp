@@ -1040,6 +1040,7 @@ std::shared_ptr<serviceinfo> routing_manager_base::find_service(
         service_t _service, instance_t _instance) const {
     std::shared_ptr<serviceinfo> its_info;
     std::lock_guard<std::mutex> its_lock(services_mutex_);
+    // 이미 map services 내부에서 key로 찾는 과정(uint16)
     auto found_service = services_.find(_service);
     if (found_service != services_.end()) {
         auto found_instance = found_service->second.find(_instance);

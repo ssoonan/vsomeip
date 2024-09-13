@@ -407,6 +407,7 @@ void udp_server_endpoint_impl::join_unlocked(const std::string &_address) {
     //
     auto join_func = [this](const std::string &_address) {
         try {
+            // 여기서 multicast group join
             VSOMEIP_DEBUG << "Joining to multicast group " << _address
                     << " from " << local_.address().to_string();
 
@@ -531,7 +532,7 @@ void udp_server_endpoint_impl::on_multicast_received(
         std::size_t _bytes,
         uint8_t _multicast_id,
         const boost::asio::ip::address &_destination) {
-
+    auto start_time = std::chrono::steady_clock::now();
     std::lock_guard<std::recursive_mutex> its_lock(multicast_mutex_);
     if (is_stopped_
             || _error == boost::asio::error::eof
@@ -549,7 +550,10 @@ void udp_server_endpoint_impl::on_multicast_received(
             on_message_received(_error, _bytes, true,
                     multicast_remote_, multicast_recv_buffer_);
         }
-
+        // 데이터를 다 처리한 이후 다시 receive_multicast로 이동, 무한 지속
+        auto end_time = std::chrono::steady_clock::now();
+        auto elapsed_ms = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
+        VSOMEIP_INFO << "받은 쪽에서 처리 소요 시간: " << elapsed_ms.count() << "μs";
         receive_multicast(_multicast_id);
     }
 }
@@ -967,6 +971,7 @@ udp_server_endpoint_impl::set_multicast_option(
                         static_cast<unsigned int>(local_.address().to_v6().scope_id()));
             }
         }
+        // 여기서 multicast_socket을 세팅 넘기는 군
         multicast_socket_->set_option(its_join_option, ec);
 
         if (!ec) {

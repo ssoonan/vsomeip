@@ -1192,6 +1192,7 @@ void routing_manager_stub::send_client_routing_info(const client_t _target,
         its_command.serialize(its_buffer, its_error);
 
         if (its_error == protocol::error_e::ERROR_OK) {
+            // 아마 이게 실제 데이터를 보내는 부분으로 추정
             its_target_endpoint->send(&its_buffer[0], uint32_t(its_buffer.size()));
         } else
             VSOMEIP_ERROR << __func__

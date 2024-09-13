@@ -940,7 +940,7 @@ void application_impl::register_availability_handler(service_t _service,
     register_availability_handler_unlocked(_service, _instance,
             its_handler_ext, _major, _minor);
 }
-
+// 얘는 availability_state_handler_t, state가 들어가있네
 void application_impl::register_availability_handler(service_t _service,
         instance_t _instance, const availability_state_handler_t &_handler,
         major_version_t _major, minor_version_t _minor) {

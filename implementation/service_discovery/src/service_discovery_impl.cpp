@@ -209,6 +209,7 @@ service_discovery_impl::stop() {
     stop_main_phase_timer();
 }
 
+// 뭐가 다름?
 void
 service_discovery_impl::request_service(
         service_t _service, instance_t _instance,
@@ -216,6 +217,7 @@ service_discovery_impl::request_service(
         ttl_t _ttl) {
     std::lock_guard<std::mutex> its_lock(requested_mutex_);
     auto find_service = requested_.find(_service);
+    // requested_에 있으면 requset값을 세팅, 없으면 requested_에 할당
     if (find_service != requested_.end()) {
         auto find_instance = find_service->second.find(_instance);
         if (find_instance == find_service->second.end()) {
@@ -223,6 +225,7 @@ service_discovery_impl::request_service(
                 = std::make_shared<request>(_major, _minor, _ttl);
         }
     } else {
+        // requested_가 갱신되는 건 여기 밖에 없음!
         requested_[_service][_instance]
             = std::make_shared<request>(_major, _minor, _ttl);
     }
@@ -753,6 +756,7 @@ service_discovery_impl::insert_find_entries(
             auto its_request = its_instance.second;
 
             // check if release_service was called / offer was received
+            // 여기서 requested_를 까면서 entry 만들고 처리하는 건 맞는 거 같은데
             auto the_service = requested_.find(its_service.first);
             if ( the_service != requested_.end() ) {
                 auto the_instance = the_service->second.find(its_instance.first);
@@ -2580,6 +2584,7 @@ bool service_discovery_impl::is_tcp_connected(service_t _service,
     return is_connected;
 }
 
+// 이걸로 find, offer 다 가는데 말이지
 bool
 service_discovery_impl::send(
         const std::vector<std::shared_ptr<message_impl> > &_messages) {
@@ -2799,6 +2804,7 @@ service_discovery_impl::offer_service(const std::shared_ptr<serviceinfo> &_info)
         }
     }
     if (!found) {
+        // 이 때 집어넣음. 여기에 들어가있는 게 start에 따른 주기에서 나가는 것이고
         collected_offers_[its_service][its_instance] = _info;
     }
 }
@@ -2807,6 +2813,7 @@ void
 service_discovery_impl::start_offer_debounce_timer(bool _first_start) {
     std::lock_guard<std::mutex> its_lock(offer_debounce_timer_mutex_);
     boost::system::error_code ec;
+    // 처음 시작이냐 아니냐에 따라 time만 약간 다를 뿐. 여튼 initial_delay가 더 작다는 정도
     if (_first_start) {
         offer_debounce_timer_.expires_from_now(initial_delay_, ec);
     } else {
@@ -2856,6 +2863,7 @@ service_discovery_impl::on_find_debounce_timer_expired(
         for (const auto& its_service : requested_) {
             for (const auto& its_instance : its_service.second) {
                 if( its_instance.second->get_sent_counter() == 0) {
+                    // repetition_phase_finds도 여기서만 갱신됨. 이또한 repetition phase에서 다시 보낼 때만 쓰는 정도
                     repetition_phase_finds[its_service.first][its_instance.first] = its_instance.second;
                 }
             }
@@ -2876,8 +2884,12 @@ service_discovery_impl::on_find_debounce_timer_expired(
             std::make_shared<message_impl>());
     its_messages.push_back(its_message);
     // Serialize and send FindService (increments sent counter in requested_ map)
+    auto start_time = std::chrono::steady_clock::now();
     insert_find_entries(its_messages, repetition_phase_finds);
     send(its_messages);
+    auto end_time = std::chrono::steady_clock::now();
+    auto elapsed_ms = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
+    VSOMEIP_INFO << "send 소요 시간: " << elapsed_ms.count() << "μs";
 
     std::chrono::milliseconds its_delay(repetitions_base_delay_);
     std::uint8_t its_repetitions(1);
@@ -2916,7 +2928,9 @@ service_discovery_impl::on_offer_debounce_timer_expired(
     {
         std::vector<services_t::iterator> non_someip_services;
         std::lock_guard<std::mutex> its_lock(collected_offers_mutex_);
+        // collected_offers_이건 언제 들어갔지? -> offer_service가 호출될 때 들어간다.
         if (collected_offers_.size()) {
+        // 여기선 근데 someip여부만 판단함,, 그냥 이상 케이스에 대한 처리라 보면 될 듯
             if (is_diagnosis_) {
                 for (services_t::iterator its_service = collected_offers_.begin();
                         its_service != collected_offers_.end(); its_service++) {
@@ -2931,6 +2945,7 @@ service_discovery_impl::on_offer_debounce_timer_expired(
                     repetition_phase_offers.insert(*its_service);
                     collected_offers_.erase(its_service);
                 }
+                // is_diagnosis_가 아니면 repetition_phase_offers에 넣어서 다시 진행
             } else {
                 repetition_phase_offers = collected_offers_;
                 collected_offers_.clear();
@@ -2951,6 +2966,7 @@ service_discovery_impl::on_offer_debounce_timer_expired(
     its_messages.push_back(its_message);
     insert_offer_entries(its_messages, repetition_phase_offers, true);
 
+    // offer다 감싸서 한 번에 send
     // Serialize and send
     send(its_messages);
 
@@ -3079,6 +3095,7 @@ service_discovery_impl::on_find_repetition_phase_timer_expired(
                     std::make_shared<message_impl>());
             its_messages.push_back(its_message);
             insert_find_entries(its_messages, its_timer_pair->second);
+            // 여기도 send가 있긴 하네
             send(its_messages);
             new_delay = std::chrono::milliseconds(_last_delay * 2);
             repetition = ++_repetition;
