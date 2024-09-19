@@ -17,7 +17,7 @@ set (VSOMEIP_HOTFIX_VERSION 0)
 set (VSOMEIP_VERSION ${VSOMEIP_MAJOR_VERSION}.${VSOMEIP_MINOR_VERSION}.${VSOMEIP_PATCH_VERSION})
 set (PACKAGE_VERSION ${VSOMEIP_VERSION}) # Used in documentation/doxygen.in
 set (CMAKE_VERBOSE_MAKEFILE off)
-set (GTEST_ROOT "/home/rtos-ubuntu/Downloads/googletest")
+# set (GTEST_ROOT "/home/rtos-ubuntu/Downloads/googletest")
 
 if (NOT GTEST_ROOT)
     if (DEFINED ENV{GTEST_ROOT})
