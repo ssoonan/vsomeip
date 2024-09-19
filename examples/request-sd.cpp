@@ -33,16 +33,12 @@ const char *state_to_string(vsomeip_v3::state_type_e state)
 class client_sample
 {
 public:
-    client_sample(bool _use_tcp, bool _be_quiet, uint32_t _cycle)
+    client_sample(bool _use_tcp, bool _be_quiet)
         : app_(vsomeip::runtime::get()->create_application()),
-          request_(vsomeip::runtime::get()->create_request(_use_tcp)),
           use_tcp_(_use_tcp),
           be_quiet_(_be_quiet),
-          cycle_(_cycle),
           running_(true),
-          blocked_(false),
-          is_available_(false),
-          sender_(std::bind(&client_sample::run, this))
+          is_available_(false)
     {
     }
 
@@ -58,8 +54,6 @@ public:
                   << (use_tcp_ ? "TCP" : "UDP")
                   << ":quiet="
                   << (be_quiet_ ? "true" : "false")
-                  << ":cycle="
-                  << cycle_
                   << "]"
                   << std::endl;
 
@@ -69,32 +63,6 @@ public:
                 this,
                 std::placeholders::_1));
 
-        app_->register_message_handler(
-            vsomeip::ANY_SERVICE, SAMPLE_INSTANCE_ID, vsomeip::ANY_METHOD,
-            std::bind(&client_sample::on_message,
-                      this,
-                      std::placeholders::_1));
-
-        request_->set_service(SAMPLE_SERVICE_ID);
-        request_->set_instance(SAMPLE_INSTANCE_ID);
-        request_->set_method(SAMPLE_METHOD_ID);
-
-        std::shared_ptr<vsomeip::payload> its_payload = vsomeip::runtime::get()->create_payload();
-        std::vector<vsomeip::byte_t> its_payload_data;
-        for (std::size_t i = 0; i < 10; ++i)
-            its_payload_data.push_back(vsomeip::byte_t(i % 256));
-        its_payload->set_data(its_payload_data);
-        request_->set_payload(its_payload);
-
-        app_->register_availability_handler(SAMPLE_SERVICE_ID, SAMPLE_INSTANCE_ID,
-                                            std::bind(&client_sample::on_availability,
-                                                      this,
-                                                      std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-
-        app_->register_availability_handler(SAMPLE_SERVICE_ID + 1, SAMPLE_INSTANCE_ID,
-                                            std::bind(&client_sample::on_availability,
-                                                      this,
-                                                      std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
         return true;
     }
 
@@ -110,21 +78,8 @@ public:
     void stop()
     {
         running_ = false;
-        blocked_ = true;
         app_->clear_all_handler();
         app_->release_service(SAMPLE_SERVICE_ID, SAMPLE_INSTANCE_ID);
-        condition_.notify_one();
-        if (std::this_thread::get_id() != sender_.get_id())
-        {
-            if (sender_.joinable())
-            {
-                sender_.join();
-            }
-        }
-        else
-        {
-            sender_.detach();
-        }
         app_->stop();
     }
 #endif
@@ -162,83 +117,18 @@ public:
             else if (_is_available && !is_available_)
             {
                 is_available_ = true;
-                send();
             }
-        }
-    }
-
-    void on_message(const std::shared_ptr<vsomeip::message> &_response)
-    {
-        std::cout << "Received a response from Service ["
-                  << std::setfill('0') << std::hex
-                  << std::setw(4) << _response->get_service()
-                  << "."
-                  << std::setw(4) << _response->get_instance()
-                  << "] to Client/Session ["
-                  << std::setw(4) << _response->get_client()
-                  << "/"
-                  << std::setw(4) << _response->get_session()
-                  << "]"
-                  << std::endl;
-        if (is_available_)
-            send();
-    }
-
-    void send()
-    {
-        if (!be_quiet_)
-        {
-            std::lock_guard<std::mutex> its_lock(mutex_);
-            blocked_ = true;
-            condition_.notify_one();
-        }
-    }
-
-    void run()
-    {
-        while (running_)
-        {
-            {
-                std::unique_lock<std::mutex> its_lock(mutex_);
-                while (!blocked_)
-                    condition_.wait(its_lock);
-                if (is_available_)
-                {
-                    app_->send(request_);
-                    std::cout << "Client/Session ["
-                              << std::setfill('0') << std::hex
-                              << std::setw(4) << request_->get_client()
-                              << "/"
-                              << std::setw(4) << request_->get_session()
-                              << "] sent a request to Service ["
-                              << std::setw(4) << request_->get_service()
-                              << "."
-                              << std::setw(4) << request_->get_instance()
-                              << "]"
-                              << std::endl;
-                    blocked_ = false;
-                }
-            }
-            std::this_thread::sleep_for(std::chrono::milliseconds(cycle_));
         }
     }
 
 private:
     std::shared_ptr<vsomeip::application> app_;
-    std::shared_ptr<vsomeip::message> request_;
     bool use_tcp_;
     bool be_quiet_;
-    uint32_t cycle_;
-    std::mutex mutex_;
-    std::condition_variable condition_;
     bool running_;
-    bool blocked_;
     bool is_available_;
-    std::chrono::time_point<std::chrono::system_clock> current_time;
     std::chrono::time_point<std::chrono::steady_clock> start_time;
     std::chrono::time_point<std::chrono::steady_clock> end_time;
-
-    std::thread sender_;
 };
 
 #ifndef VSOMEIP_ENABLE_SIGNAL_HANDLING
@@ -255,12 +145,10 @@ int main(int argc, char **argv)
 {
     bool use_tcp = false;
     bool be_quiet = false;
-    uint32_t cycle = 1000; // Default: 1s
 
     std::string tcp_enable("--tcp");
     std::string udp_enable("--udp");
     std::string quiet_enable("--quiet");
-    std::string cycle_arg("--cycle");
 
     int i = 1;
     while (i < argc)
@@ -277,17 +165,10 @@ int main(int argc, char **argv)
         {
             be_quiet = true;
         }
-        else if (cycle_arg == argv[i] && i + 1 < argc)
-        {
-            i++;
-            std::stringstream converter;
-            converter << argv[i];
-            converter >> cycle;
-        }
         i++;
     }
 
-    client_sample its_sample(use_tcp, be_quiet, cycle);
+    client_sample its_sample(use_tcp, be_quiet);
 #ifndef VSOMEIP_ENABLE_SIGNAL_HANDLING
     its_sample_ptr = &its_sample;
     signal(SIGINT, handle_signal);

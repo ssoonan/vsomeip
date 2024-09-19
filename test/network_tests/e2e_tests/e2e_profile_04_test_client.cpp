@@ -215,7 +215,7 @@ e2e_profile_04_test_client::shutdown_service() {
     request->set_instance(PROFILE_04_INSTANCE);
     request->set_method(PROFILE_04_SHUTDOWN);
     request->set_interface_version(PROFILE_04_MAJOR);
-
+    
     app_->send(request);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(250));

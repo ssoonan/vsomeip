@@ -21,6 +21,7 @@
 // for getpid
 #include <sys/types.h>
 #include <unistd.h>
+#include <iomanip>
 
 class cpu_load_test_service
 {

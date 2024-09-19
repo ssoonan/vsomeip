@@ -8,6 +8,7 @@
 
 #include <vsomeip/vsomeip.hpp>
 #include <vsomeip/internal/logger.hpp>
+#include <iomanip> 
 
 #ifdef USE_DLT
 #ifndef ANDROID

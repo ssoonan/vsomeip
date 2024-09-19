@@ -5,6 +5,7 @@
 
 #ifndef NPDU_TESTS_NPDU_TEST_GLOBALS_HPP_
 #define NPDU_TESTS_NPDU_TEST_GLOBALS_HPP_
+#include <iomanip> 
 
 namespace npdu_test {
 

@@ -3530,7 +3530,7 @@ service_discovery_impl::get_ttl_factor(
 void
 service_discovery_impl::on_last_msg_received_timer_expired(
         const boost::system::error_code &_error) {
-
+    // 이건 왜 뜨는 거지 흠,,
     if (!_error) {
         // We didn't receive a multicast message within 110% of the cyclic_offer_delay_
         VSOMEIP_WARNING << "Didn't receive a multicast SD message for " <<

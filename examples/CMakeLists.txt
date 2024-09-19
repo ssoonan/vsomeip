@@ -16,6 +16,9 @@ set(EXAMPLE_CONFIG_FILES
 add_executable(request-sample request-sample.cpp ${EXAMPLE_CONFIG_FILES})
 target_link_libraries(request-sample ${VSOMEIP_NAME} ${Boost_LIBRARIES} ${DL_LIBRARY})
 
+add_executable(request-sd request-sd.cpp ${EXAMPLE_CONFIG_FILES})
+target_link_libraries(request-sd ${VSOMEIP_NAME} ${Boost_LIBRARIES} ${DL_LIBRARY})
+
 add_executable(response-sample response-sample.cpp ${EXAMPLE_CONFIG_FILES})
 target_link_libraries(response-sample ${VSOMEIP_NAME} ${Boost_LIBRARIES} ${DL_LIBRARY})
 
@@ -25,10 +28,10 @@ target_link_libraries(subscribe-sample ${VSOMEIP_NAME} ${Boost_LIBRARIES} ${DL_L
 add_executable(notify-sample notify-sample.cpp ${EXAMPLE_CONFIG_FILES})
 target_link_libraries(notify-sample ${VSOMEIP_NAME} ${Boost_LIBRARIES} ${DL_LIBRARY})
 
-add_dependencies(examples request-sample response-sample subscribe-sample notify-sample)
+add_dependencies(examples request-sample response-sample subscribe-sample notify-sample request-sd)
 
 install (
-    TARGETS request-sample response-sample subscribe-sample notify-sample
+    TARGETS request-sample response-sample subscribe-sample notify-sample request-sd
     RUNTIME DESTINATION "${INSTALL_BIN_DIR}" COMPONENT bin
 )
 

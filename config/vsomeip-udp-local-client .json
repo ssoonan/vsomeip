@@ -35,7 +35,7 @@
             "unreliable" : [ 40000, 40002 ]
         }
     ],
-    "routing" : "client-sample",
+    "routing" : "server-sample",
     "service-discovery" :
     {
         "enable" : "true",
@@ -48,6 +48,6 @@
         "repetitions_max" : "3",
         "ttl" : "3",
         "cyclic_offer_delay" : "2000",
-        "request_response_delay" : "1000"
+        "request_response_delay" : "1500"
     }
 }

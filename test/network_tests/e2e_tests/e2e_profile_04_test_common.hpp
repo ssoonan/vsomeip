@@ -7,6 +7,7 @@
 #define E2E_PROFILE_04_TEST_COMMON_HPP_
 
 #include <vsomeip/vsomeip.hpp>
+#include <iomanip>
 
 const vsomeip::service_t PROFILE_04_SERVICE = 0xd025;
 const vsomeip::instance_t PROFILE_04_INSTANCE = 0x0001;
