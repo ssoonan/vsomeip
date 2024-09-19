@@ -1204,6 +1204,11 @@ bool routing_manager_impl::send_via_sd(
 
         }
 #endif
+        auto end_time = std::chrono::high_resolution_clock::now();
+        auto elapsed_ms = std::chrono::duration_cast<std::chrono::microseconds>(end_time - discovery_->start_time);
+        VSOMEIP_DEBUG << "processing time before send: " 
+         << elapsed_ms.count()
+         << " μs";
         return its_endpoint->send_to(_target, _data, _size);
     }
 

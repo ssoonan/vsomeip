@@ -532,7 +532,6 @@ void udp_server_endpoint_impl::on_multicast_received(
         std::size_t _bytes,
         uint8_t _multicast_id,
         const boost::asio::ip::address &_destination) {
-    auto start_time = std::chrono::steady_clock::now();
     // 응답 받는 시점 기록
     auto arrived_time = std::chrono::high_resolution_clock::now();
     VSOMEIP_DEBUG << "Response received at: " 
@@ -556,9 +555,6 @@ void udp_server_endpoint_impl::on_multicast_received(
                     multicast_remote_, multicast_recv_buffer_);
         }
         // 데이터를 다 처리한 이후 다시 receive_multicast로 이동, 무한 지속
-        auto end_time = std::chrono::steady_clock::now();
-        auto elapsed_ms = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-        VSOMEIP_INFO << "receive 소요 시간: " << elapsed_ms.count() << "μs";
         receive_multicast(_multicast_id);
     }
 }

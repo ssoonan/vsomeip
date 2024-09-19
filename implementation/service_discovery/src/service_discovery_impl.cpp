@@ -2884,16 +2884,15 @@ service_discovery_impl::on_find_debounce_timer_expired(
             std::make_shared<message_impl>());
     its_messages.push_back(its_message);
     // Serialize and send FindService (increments sent counter in requested_ map)
-    auto start_time = std::chrono::steady_clock::now();
     insert_find_entries(its_messages, repetition_phase_finds);
-     auto start_time = std::chrono::high_resolution_clock::now();
+    auto send_start_time = std::chrono::high_resolution_clock::now();
      // 현재 시간을 기준으로 전송한 시간을 출력
     VSOMEIP_DEBUG << "Request sent at: " 
-         << std::chrono::duration_cast<std::chrono::microseconds>(start_time.time_since_epoch()).count() 
+         << std::chrono::duration_cast<std::chrono::microseconds>(send_start_time.time_since_epoch()).count() 
          << " μs";
     send(its_messages);
-    auto end_time = std::chrono::steady_clock::now();
-    auto elapsed_ms = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto elapsed_ms = std::chrono::duration_cast<std::chrono::microseconds>(end_time - send_start_time);
     VSOMEIP_INFO << "send 소요 시간: " << elapsed_ms.count() << "μs";
 
     std::chrono::milliseconds its_delay(repetitions_base_delay_);
@@ -3016,7 +3015,7 @@ service_discovery_impl::on_repetition_phase_timer_expired(
         const boost::system::error_code &_error,
         const std::shared_ptr<boost::asio::steady_timer>& _timer,
         std::uint8_t _repetition, std::uint32_t _last_delay) {
-    auto start_time = std::chrono::steady_clock::now();
+    start_time = std::chrono::high_resolution_clock::now();
     if (_error) {
         return;
     }
@@ -3060,7 +3059,7 @@ service_discovery_impl::on_repetition_phase_timer_expired(
 
             // Serialize and send
             send(its_messages);
-            auto end_time = std::chrono::steady_clock::now();
+            auto end_time = std::chrono::high_resolution_clock::now();
             auto elapsed_ms = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
             VSOMEIP_INFO << "send 소요 시간: " << elapsed_ms.count() << "μs";
             if (move_to_main) {

@@ -26,6 +26,7 @@ class service_discovery {
 public:
     virtual ~service_discovery() {
     }
+    std::chrono::high_resolution_clock::time_point start_time;
 
     virtual boost::asio::io_context &get_io() = 0;
 
