@@ -2886,6 +2886,11 @@ service_discovery_impl::on_find_debounce_timer_expired(
     // Serialize and send FindService (increments sent counter in requested_ map)
     auto start_time = std::chrono::steady_clock::now();
     insert_find_entries(its_messages, repetition_phase_finds);
+     auto start_time = std::chrono::high_resolution_clock::now();
+     // 현재 시간을 기준으로 전송한 시간을 출력
+    VSOMEIP_DEBUG << "Request sent at: " 
+         << std::chrono::duration_cast<std::chrono::microseconds>(start_time.time_since_epoch()).count() 
+         << " μs";
     send(its_messages);
     auto end_time = std::chrono::steady_clock::now();
     auto elapsed_ms = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
