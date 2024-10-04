@@ -1,0 +1,1 @@
+env VSOMEIP_CONFIGURATION=config/service-test.json VSOMEIP_APPLICATION_NAME=service-sample build/examples/response-sample

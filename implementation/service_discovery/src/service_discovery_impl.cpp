@@ -1399,12 +1399,18 @@ service_discovery_impl::process_serviceentry(
                                                  its_major, its_minor, _unicast_flag);
                 break;
             case entry_type_e::OFFER_SERVICE:
-                process_offerservice_serviceentry(its_service, its_instance,
-                        its_major, its_minor, its_ttl,
-                        its_reliable_address, its_reliable_port,
-                        its_unreliable_address, its_unreliable_port, _resubscribes,
-                        _received_via_mcast, _sd_ac_state);
-                break;
+                {
+                    process_offerservice_serviceentry(its_service, its_instance,
+                            its_major, its_minor, its_ttl,
+                            its_reliable_address, its_reliable_port,
+                            its_unreliable_address, its_unreliable_port, _resubscribes,
+                            _received_via_mcast, _sd_ac_state);
+                    auto finished_time = std::chrono::high_resolution_clock::now();
+                    VSOMEIP_DEBUG << "react to offer is finished at: " 
+                        << std::chrono::duration_cast<std::chrono::microseconds>(finished_time.time_since_epoch()).count()
+                        << " μs";
+                    break;
+                }
             case entry_type_e::UNKNOWN:
             default:
                 VSOMEIP_ERROR << __func__ << ": Unsupported service entry type";
@@ -2891,9 +2897,6 @@ service_discovery_impl::on_find_debounce_timer_expired(
          << std::chrono::duration_cast<std::chrono::microseconds>(send_start_time.time_since_epoch()).count() 
          << " μs";
     send(its_messages);
-    auto end_time = std::chrono::high_resolution_clock::now();
-    auto elapsed_ms = std::chrono::duration_cast<std::chrono::microseconds>(end_time - send_start_time);
-    VSOMEIP_INFO << "send 소요 시간: " << elapsed_ms.count() << "μs";
 
     std::chrono::milliseconds its_delay(repetitions_base_delay_);
     std::uint8_t its_repetitions(1);
@@ -3015,7 +3018,7 @@ service_discovery_impl::on_repetition_phase_timer_expired(
         const boost::system::error_code &_error,
         const std::shared_ptr<boost::asio::steady_timer>& _timer,
         std::uint8_t _repetition, std::uint32_t _last_delay) {
-    start_time = std::chrono::high_resolution_clock::now();
+
     if (_error) {
         return;
     }
@@ -3059,9 +3062,6 @@ service_discovery_impl::on_repetition_phase_timer_expired(
 
             // Serialize and send
             send(its_messages);
-            auto end_time = std::chrono::high_resolution_clock::now();
-            auto elapsed_ms = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-            VSOMEIP_INFO << "send 소요 시간: " << elapsed_ms.count() << "μs";
             if (move_to_main) {
                 move_offers_into_main_phase(_timer);
                 return;

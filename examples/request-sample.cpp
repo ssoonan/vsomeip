@@ -13,7 +13,7 @@
 #include <thread>
 
 #include <vsomeip/vsomeip.hpp>
-#include <vsomeip/enumeration_types.hpp>
+#include <vsomeip/internal/logger.hpp>
 
 #include "sample-ids.hpp"
 
@@ -134,6 +134,10 @@ public:
         if (_state == vsomeip::state_type_e::ST_REGISTERED)
         {
             start_time = std::chrono::steady_clock::now();
+            auto started_time = std::chrono::high_resolution_clock::now();
+            VSOMEIP_INFO << "matching is started at: " 
+                << std::chrono::duration_cast<std::chrono::microseconds>(started_time.time_since_epoch()).count()
+                << " μs";
             app_->request_service(SAMPLE_SERVICE_ID, SAMPLE_INSTANCE_ID);
         }
     }
@@ -144,6 +148,10 @@ public:
         {
             end_time = std::chrono::steady_clock::now();
             auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+            auto finished_time = std::chrono::high_resolution_clock::now();
+            VSOMEIP_INFO  << "matching is finished at: " 
+                << std::chrono::duration_cast<std::chrono::microseconds>(finished_time.time_since_epoch()).count()
+                << " μs";
             std::cout << "매칭까지 처리 시간: " << elapsed_ms.count() << "ms" << std::endl;
         }
 
@@ -286,7 +294,7 @@ int main(int argc, char **argv)
         }
         i++;
     }
-
+    // 클래스의 실질적인 초기화는
     client_sample its_sample(use_tcp, be_quiet, cycle);
 #ifndef VSOMEIP_ENABLE_SIGNAL_HANDLING
     its_sample_ptr = &its_sample;

@@ -2,42 +2,21 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
-#ifndef VSOMEIP_ENABLE_SIGNAL_HANDLING
+
 #include <csignal>
-#endif
 #include <chrono>
-#include <condition_variable>
 #include <iomanip>
 #include <iostream>
-#include <sstream>
 #include <thread>
-
 #include <vsomeip/vsomeip.hpp>
-#include <vsomeip/enumeration_types.hpp>
-
 #include "sample-ids.hpp"
+#include <vsomeip/internal/logger.hpp>
 
-const char *state_to_string(vsomeip_v3::state_type_e state)
-{
-    switch (state)
-    {
-    case vsomeip_v3::state_type_e::ST_REGISTERED:
-        return "ST_REGISTERED";
-    case vsomeip_v3::state_type_e::ST_DEREGISTERED:
-        return "ST_DEREGISTERED";
-    default:
-        return "Unknown State";
-    }
-}
-
-class client_sample
+class service_discovery_client
 {
 public:
-    client_sample(bool _use_tcp, bool _be_quiet)
+    service_discovery_client()
         : app_(vsomeip::runtime::get()->create_application()),
-          use_tcp_(_use_tcp),
-          be_quiet_(_be_quiet),
-          running_(true),
           is_available_(false)
     {
     }
@@ -50,45 +29,42 @@ public:
             return false;
         }
 
-        std::cout << "Client settings [protocol="
-                  << (use_tcp_ ? "TCP" : "UDP")
-                  << ":quiet="
-                  << (be_quiet_ ? "true" : "false")
-                  << "]"
-                  << std::endl;
-
         app_->register_state_handler(
             std::bind(
-                &client_sample::on_state,
+                &service_discovery_client::on_state,
                 this,
                 std::placeholders::_1));
+
+        app_->register_availability_handler(SAMPLE_SERVICE_ID, SAMPLE_INSTANCE_ID,
+                                            std::bind(&service_discovery_client::on_availability,
+                                                      this,
+                                                      std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
         return true;
     }
 
     void start()
     {
+        is_available_ = false;
         app_->start();
+        std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 
-#ifndef VSOMEIP_ENABLE_SIGNAL_HANDLING
-    /*
-     * Handle signal to shutdown
-     */
     void stop()
     {
-        running_ = false;
         app_->clear_all_handler();
         app_->release_service(SAMPLE_SERVICE_ID, SAMPLE_INSTANCE_ID);
         app_->stop();
     }
-#endif
 
     void on_state(vsomeip::state_type_e _state)
     {
         if (_state == vsomeip::state_type_e::ST_REGISTERED)
         {
-            start_time = std::chrono::steady_clock::now();
+            start_time = std::chrono::high_resolution_clock::now();
+            VSOMEIP_INFO << "matching is started at: "
+                         << std::chrono::duration_cast<std::chrono::microseconds>(start_time.time_since_epoch()).count()
+                         << " μs";
             app_->request_service(SAMPLE_SERVICE_ID, SAMPLE_INSTANCE_ID);
         }
     }
@@ -97,91 +73,62 @@ public:
     {
         if (_is_available)
         {
-            end_time = std::chrono::steady_clock::now();
-            auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+            finished_time = std::chrono::high_resolution_clock::now();
+            auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(finished_time - start_time);
+            VSOMEIP_INFO << "matching is finished at: "
+                         << std::chrono::duration_cast<std::chrono::microseconds>(finished_time.time_since_epoch()).count()
+                         << " μs";
             std::cout << "매칭까지 처리 시간: " << elapsed_ms.count() << "ms" << std::endl;
+            std::cout << "Service ["
+                      << std::setw(4) << std::setfill('0') << std::hex << _service << "." << _instance
+                      << "] is available." << std::endl;
+            is_available_ = true;
+            this->stop();
         }
-
-        std::cout << "Service ["
-                  << std::setw(4) << std::setfill('0') << std::hex << _service << "." << _instance
-                  << "] is "
-                  << (_is_available ? "available." : "NOT available.")
-                  << std::endl;
-
-        if (SAMPLE_SERVICE_ID == _service && SAMPLE_INSTANCE_ID == _instance)
+        else
         {
-            if (is_available_ && !_is_available)
-            {
-                is_available_ = false;
-            }
-            else if (_is_available && !is_available_)
-            {
-                is_available_ = true;
-            }
+            std::cout << "Service ["
+                      << std::setw(4) << std::setfill('0') << std::hex << _service << "." << _instance
+                      << "] is NOT available." << std::endl;
         }
     }
 
 private:
     std::shared_ptr<vsomeip::application> app_;
-    bool use_tcp_;
-    bool be_quiet_;
-    bool running_;
     bool is_available_;
-    std::chrono::time_point<std::chrono::steady_clock> start_time;
-    std::chrono::time_point<std::chrono::steady_clock> end_time;
+    std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
+    std::chrono::time_point<std::chrono::high_resolution_clock> finished_time;
 };
 
-#ifndef VSOMEIP_ENABLE_SIGNAL_HANDLING
-client_sample *its_sample_ptr(nullptr);
+service_discovery_client *its_sample_ptr(nullptr);
 void handle_signal(int _signal)
 {
     if (its_sample_ptr != nullptr &&
         (_signal == SIGINT || _signal == SIGTERM))
-        its_sample_ptr->stop();
-}
-#endif
-
-int main(int argc, char **argv)
-{
-    bool use_tcp = false;
-    bool be_quiet = false;
-
-    std::string tcp_enable("--tcp");
-    std::string udp_enable("--udp");
-    std::string quiet_enable("--quiet");
-
-    int i = 1;
-    while (i < argc)
     {
-        if (tcp_enable == argv[i])
-        {
-            use_tcp = true;
-        }
-        else if (udp_enable == argv[i])
-        {
-            use_tcp = false;
-        }
-        else if (quiet_enable == argv[i])
-        {
-            be_quiet = true;
-        }
-        i++;
+        its_sample_ptr->stop();
     }
+}
 
-    client_sample its_sample(use_tcp, be_quiet);
-#ifndef VSOMEIP_ENABLE_SIGNAL_HANDLING
+int main()
+{
+    service_discovery_client its_sample;
     its_sample_ptr = &its_sample;
     signal(SIGINT, handle_signal);
     signal(SIGTERM, handle_signal);
-#endif
-    if (its_sample.init())
+
+    for (int i = 0; i < 10; ++i)
     {
-        std::cout << "sample start\n";
-        its_sample.start();
-        return 0;
+        if (its_sample.init())
+        {
+            std::cout << "Service Discovery iteration " << (i + 1) << " start." << std::endl;
+            its_sample.start();
+        }
+        else
+        {
+            return 1;
+        }
+        std::this_thread::sleep_for(std::chrono::seconds(1));
     }
-    else
-    {
-        return 1;
-    }
+    return 0;
 }
