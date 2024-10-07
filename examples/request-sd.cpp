@@ -83,7 +83,6 @@ public:
                       << std::setw(4) << std::setfill('0') << std::hex << _service << "." << _instance
                       << "] is available." << std::endl;
             is_available_ = true;
-            this->stop();
         }
         else
         {
@@ -113,22 +112,19 @@ void handle_signal(int _signal)
 int main()
 {
     service_discovery_client its_sample;
+#ifndef VSOMEIP_ENABLE_SIGNAL_HANDLING
     its_sample_ptr = &its_sample;
     signal(SIGINT, handle_signal);
     signal(SIGTERM, handle_signal);
-
-    for (int i = 0; i < 10; ++i)
+#endif
+    if (its_sample.init())
     {
-        if (its_sample.init())
-        {
-            std::cout << "Service Discovery iteration " << (i + 1) << " start." << std::endl;
-            its_sample.start();
-        }
-        else
-        {
-            return 1;
-        }
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::cout << "sample start\n";
+        its_sample.start();
+        return 0;
     }
-    return 0;
+    else
+    {
+        return 1;
+    }
 }

@@ -13,6 +13,7 @@
 #include <thread>
 
 #include <vsomeip/vsomeip.hpp>
+#include <vsomeip/internal/logger.hpp>
 
 #include "sample-ids.hpp"
 
@@ -21,7 +22,10 @@ class service_sample
 public:
     service_sample(bool _use_static_routing) : app_(vsomeip::runtime::get()->create_application()),
                                                is_registered_(false),
-                                               use_static_routing_(_use_static_routing)
+                                               use_static_routing_(_use_static_routing),
+                                               blocked_(false),
+                                               running_(true),
+                                               offer_thread_(std::bind(&service_sample::run, this))
     {
     }
 
@@ -37,10 +41,11 @@ public:
         app_->register_state_handler(
             std::bind(&service_sample::on_state, this,
                       std::placeholders::_1));
-        app_->register_message_handler(
-            SAMPLE_SERVICE_ID, SAMPLE_INSTANCE_ID, SAMPLE_METHOD_ID,
-            std::bind(&service_sample::on_find_message, this,
-                      std::placeholders::_1));
+
+        // app_->register_availability_handler(SAMPLE_SERVICE_ID, SAMPLE_INSTANCE_ID,
+        //                                     std::bind(&service_sample::on_availability,
+        //                                               this,
+        //                                               std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
         std::cout << "Static routing " << (use_static_routing_ ? "ON" : "OFF")
                   << std::endl;
@@ -59,7 +64,10 @@ public:
     void stop()
     {
         running_ = false;
+        blocked_ = true;
         app_->clear_all_handler();
+        stop_offer();
+        condition_.notify_one();
         app_->stop();
     }
 #endif
@@ -85,6 +93,8 @@ public:
             if (!is_registered_)
             {
                 is_registered_ = true;
+                blocked_ = true;
+                condition_.notify_one();
             }
         }
         else
@@ -93,25 +103,42 @@ public:
         }
     }
 
-    void on_find_message(const std::shared_ptr<vsomeip::message> &_request)
-    {
-        std::cout << "Received a find request with Client/Session ["
-                  << std::setfill('0') << std::hex
-                  << std::setw(4) << _request->get_client() << "/"
-                  << std::setw(4) << _request->get_session() << "]"
-                  << std::endl;
+    // void on_availability(vsomeip::service_t _service, vsomeip::instance_t _instance, bool _is_available)
+    // {
+    //     if (_is_available)
+    //     {
+    //         // auto finished_time = std::chrono::high_resolution_clock::now();
+    //         VSOMEIP_INFO << "service가 available 입니다";
+    //         std::cout << "Service ["
+    //                   << std::setw(4) << std::setfill('0') << std::hex << _service << "." << _instance
+    //                   << "] is "
+    //                   << (_is_available ? "available." : "NOT available.")
+    //                   << std::endl;
+    //     }
+    // }
 
-        // Once the find request is received, start offering the service.
+    void run()
+    {
+        std::unique_lock<std::mutex> its_lock(mutex_);
+        while (!blocked_)
+            condition_.wait(its_lock);
         offer();
+        while (running_)
+            ;
     }
 
 private:
-    std::shared_ptr<vsomeip::application> app_;
+    std::shared_ptr<vsomeip::application>
+        app_;
     bool is_registered_;
     bool use_static_routing_;
 
     std::mutex mutex_;
-    bool running_ = true;
+    std::condition_variable condition_;
+    bool blocked_;
+
+    bool running_;
+    std::thread offer_thread_;
 };
 
 #ifndef VSOMEIP_ENABLE_SIGNAL_HANDLING
