@@ -16,8 +16,7 @@ class service_discovery_client
 {
 public:
     service_discovery_client()
-        : app_(vsomeip::runtime::get()->create_application()),
-          is_available_(false)
+        : app_(vsomeip::runtime::get()->create_application())
     {
     }
 
@@ -45,9 +44,7 @@ public:
 
     void start()
     {
-        is_available_ = false;
         app_->start();
-        std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 
     void stop()
@@ -82,7 +79,6 @@ public:
             std::cout << "Service ["
                       << std::setw(4) << std::setfill('0') << std::hex << _service << "." << _instance
                       << "] is available." << std::endl;
-            is_available_ = true;
         }
         else
         {
@@ -94,7 +90,6 @@ public:
 
 private:
     std::shared_ptr<vsomeip::application> app_;
-    bool is_available_;
     std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
     std::chrono::time_point<std::chrono::high_resolution_clock> finished_time;
 };
