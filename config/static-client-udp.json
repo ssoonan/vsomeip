@@ -1,0 +1,28 @@
+{
+  "unicast": "192.168.100.56",
+  "netmask": "255.255.255.0",
+  "logging": {
+    "level": "info",
+    "console": "true",
+    "file": { "enable": "true", "path": "/var/log/vsomeip.log" },
+    "dlt": "true"
+  },
+  "applications": [
+    {
+      "name": "client-sample",
+      "id": "0x1343"
+    }
+  ],
+  "services": [
+    {
+      "service": "0x1234",
+      "instance": "0x5678",
+      "unicast": "192.168.100.55",
+      "unreliable": "30509"
+    }
+  ],
+  "routing": "client-sample",
+  "service-discovery": {
+    "enable": "false"
+  }
+}
