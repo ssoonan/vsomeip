@@ -19,11 +19,17 @@ target_link_libraries(request-sample ${VSOMEIP_NAME} ${Boost_LIBRARIES} ${DL_LIB
 add_executable(request-sd request-sd.cpp ${EXAMPLE_CONFIG_FILES})
 target_link_libraries(request-sd ${VSOMEIP_NAME} ${Boost_LIBRARIES} ${DL_LIBRARY})
 
+add_executable(request-tcp-recovery request-tcp-recovery.cpp ${EXAMPLE_CONFIG_FILES})
+target_link_libraries(request-tcp-recovery ${VSOMEIP_NAME} ${Boost_LIBRARIES} ${DL_LIBRARY})
+
 add_executable(response-sample response-sample.cpp ${EXAMPLE_CONFIG_FILES})
 target_link_libraries(response-sample ${VSOMEIP_NAME} ${Boost_LIBRARIES} ${DL_LIBRARY})
 
 add_executable(response-sd response-sd.cpp ${EXAMPLE_CONFIG_FILES})
 target_link_libraries(response-sd ${VSOMEIP_NAME} ${Boost_LIBRARIES} ${DL_LIBRARY})
+
+add_executable(response-tcp-recovery response-tcp-recovery.cpp ${EXAMPLE_CONFIG_FILES})
+target_link_libraries(response-tcp-recovery ${VSOMEIP_NAME} ${Boost_LIBRARIES} ${DL_LIBRARY})
 
 add_executable(subscribe-sample subscribe-sample.cpp ${EXAMPLE_CONFIG_FILES})
 target_link_libraries(subscribe-sample ${VSOMEIP_NAME} ${Boost_LIBRARIES} ${DL_LIBRARY})
@@ -31,10 +37,10 @@ target_link_libraries(subscribe-sample ${VSOMEIP_NAME} ${Boost_LIBRARIES} ${DL_L
 add_executable(notify-sample notify-sample.cpp ${EXAMPLE_CONFIG_FILES})
 target_link_libraries(notify-sample ${VSOMEIP_NAME} ${Boost_LIBRARIES} ${DL_LIBRARY})
 
-add_dependencies(examples request-sample response-sample subscribe-sample notify-sample request-sd response-sd)
+add_dependencies(examples request-sample response-sample subscribe-sample notify-sample request-sd response-sd request-tcp-recovery response-tcp-recovery)
 
 install (
-    TARGETS request-sample response-sample subscribe-sample notify-sample request-sd response-sd
+    TARGETS request-sample response-sample subscribe-sample notify-sample request-sd response-sd request-tcp-recovery response-tcp-recovery
     RUNTIME DESTINATION "${INSTALL_BIN_DIR}" COMPONENT bin
 )
 
