@@ -138,7 +138,7 @@ public:
     {
         finished_time = std::chrono::high_resolution_clock::now();
         auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(finished_time - started_time);
-        std::cout << "TCP 통신 소요 시간: " << elapsed_ms.count() << "ms" << std::endl;
+        VSOMEIP_INFO << "TCP 통신 소요 시간: " << elapsed_ms.count() << "ms";
         std::cout << "Received a response from Service ["
                   << std::setfill('0') << std::hex
                   << std::setw(4) << _response->get_service()
