@@ -142,8 +142,13 @@ void tcp_client_endpoint_impl::connect() {
     socket_->open(remote_.protocol(), its_error);
 
     if (!its_error || its_error == boost::asio::error::already_open) {
-        // Nagle algorithm off
+        // Nagle algorithm off. 효율보단 속도를 위해
         socket_->set_option(ip::tcp::no_delay(true), its_error);
+        int quickack = 1;
+        setsockopt(socket_->native_handle(), IPPROTO_TCP, TCP_QUICKACK, &quickack, sizeof(int));
+        int user_timeout = 30;  // 단위: milliseconds
+        setsockopt(socket_->native_handle(), SOL_TCP, TCP_USER_TIMEOUT, &user_timeout, sizeof(int));
+
         if (its_error) {
             VSOMEIP_WARNING << "tcp_client_endpoint::connect: couldn't disable "
                     << "Nagle algorithm: " << its_error.message()
@@ -245,7 +250,8 @@ void tcp_client_endpoint_impl::connect() {
                 )
             )
         );
-    } else {
+    } // 에러 발생 시
+     else {
         std::size_t operations_cancelled;
         {
             std::lock_guard<std::mutex> its_lock(connecting_timer_mutex_);
@@ -777,7 +783,8 @@ void tcp_client_endpoint_impl::receive_cbk(
             strand_.dispatch([self, &_recv_buffer, _recv_buffer_size, its_missing_capacity](){
                 self->receive(_recv_buffer, _recv_buffer_size, its_missing_capacity);
             });
-        } else {
+        } // 여기서 TCP client에서의 에러가 발생하네
+         else {
             VSOMEIP_WARNING << "tcp_client_endpoint receive_cbk: "
                     << _error.message() << "(" << std::dec << _error.value()
                     << ") local: " << get_address_port_local()

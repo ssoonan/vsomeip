@@ -266,6 +266,10 @@ void tcp_server_endpoint_impl::accept_cbk(const connection::ptr& _connection,
             _connection->set_remote_info(remote);
             // Nagle algorithm off
             new_connection_socket.set_option(ip::tcp::no_delay(true), its_error);
+            int quickack = 1;
+            setsockopt(new_connection_socket.native_handle(), IPPROTO_TCP, TCP_QUICKACK, &quickack, sizeof(int));
+            int user_timeout = 30;  // 단위: milliseconds
+            setsockopt(new_connection_socket.native_handle(), SOL_TCP, TCP_USER_TIMEOUT, &user_timeout, sizeof(int));
 
             new_connection_socket.set_option(boost::asio::socket_base::keep_alive(true), its_error);
             if (its_error) {
@@ -1014,6 +1018,7 @@ void tcp_server_endpoint_impl::connection::wait_until_sent(const boost::system::
     if (it != its_server->targets_.end()) {
         auto &its_data = it->second;
         if (its_data.is_sending_ && _error) {
+            // 여기서 또 알아서 ttimeout을 계산
             std::chrono::milliseconds its_timeout(VSOMEIP_MAX_TCP_SENT_WAIT_TIME);
             boost::system::error_code ec;
             its_data.sent_timer_.expires_from_now(its_timeout, ec);
