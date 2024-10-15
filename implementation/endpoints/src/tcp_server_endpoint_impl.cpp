@@ -268,8 +268,6 @@ void tcp_server_endpoint_impl::accept_cbk(const connection::ptr& _connection,
             new_connection_socket.set_option(ip::tcp::no_delay(true), its_error);
             int quickack = 1;
             setsockopt(new_connection_socket.native_handle(), IPPROTO_TCP, TCP_QUICKACK, &quickack, sizeof(int));
-            int user_timeout = 30;  // 단위: milliseconds
-            setsockopt(new_connection_socket.native_handle(), SOL_TCP, TCP_USER_TIMEOUT, &user_timeout, sizeof(int));
 
             new_connection_socket.set_option(boost::asio::socket_base::keep_alive(true), its_error);
             if (its_error) {
