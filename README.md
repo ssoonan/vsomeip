@@ -88,7 +88,7 @@ make examples
 
 - config 내 `request_response_delay` 조절을 통한 SD 시간 단축
 - `iptables`를 통한 패킷 로스는 소프트웨어 레벨로 이를 막지만 wireshark는 하드웨어 데이터를 관찰하기에 둘 간의 패킷 불일치 발생
-- 
+
 
 
 ---
@@ -107,7 +107,7 @@ config를 통한 시간 단축, TCP 프로토콜 내에서 할 수 있는 테스
   - 어떻게 차량 환경에서 TCP 프로토콜을 최적화 할 지에 대한 가이드
 - 기타 웹 자료
   - https://watchout31337.tistory.com/444
-  - 
+  
 
 ---
 
