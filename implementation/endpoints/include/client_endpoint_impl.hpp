@@ -31,6 +31,7 @@ namespace vsomeip_v3 {
 class endpoint;
 class endpoint_host;
 
+// 아예 template으로 Protocol을 받네. 이게 어떤 타입인지는 모르겠지만
 template<typename Protocol>
 class client_endpoint_impl: public endpoint_impl<Protocol>, public client_endpoint,
         public std::enable_shared_from_this<client_endpoint_impl<Protocol> > {

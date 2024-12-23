@@ -533,7 +533,7 @@ void udp_server_endpoint_impl::on_multicast_received(
         uint8_t _multicast_id,
         const boost::asio::ip::address &_destination) {
     // 응답 받는 시점 기록
-    auto arrived_time = std::chrono::high_resolution_clock::now();
+    arrived_time = std::chrono::high_resolution_clock::now();
     VSOMEIP_DEBUG << "Response received at: " 
          << std::chrono::duration_cast<std::chrono::microseconds>(arrived_time.time_since_epoch()).count() 
          << " μs";

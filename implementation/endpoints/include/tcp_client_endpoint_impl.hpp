@@ -16,6 +16,7 @@
 
 namespace vsomeip_v3 {
 
+// 이렇게 typedef로 template을 한 걸 싹 바꾸는구만. 들어가는 타입 자체는 부스트에 있던 것이고
 typedef client_endpoint_impl<
             boost::asio::ip::tcp
         > tcp_client_endpoint_base_impl;

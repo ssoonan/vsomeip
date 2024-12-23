@@ -194,6 +194,10 @@ service_discovery_impl::start() {
                 its_server_endpoint->join(sd_multicast_);
         }
     }
+    auto time = std::chrono::high_resolution_clock::now();
+    VSOMEIP_DEBUG << "before timer: " 
+         << std::chrono::duration_cast<std::chrono::microseconds>(time.time_since_epoch()).count() 
+         << " μs";
     is_suspended_ = false;
     start_main_phase_timer();
     start_offer_debounce_timer(true);
@@ -2893,6 +2897,7 @@ service_discovery_impl::on_find_debounce_timer_expired(
     insert_find_entries(its_messages, repetition_phase_finds);
     auto send_start_time = std::chrono::high_resolution_clock::now();
      // 현재 시간을 기준으로 전송한 시간을 출력
+     // 얘는 뭔 전송을 말하는가?
     VSOMEIP_DEBUG << "Request sent at: " 
          << std::chrono::duration_cast<std::chrono::microseconds>(send_start_time.time_since_epoch()).count() 
          << " μs";

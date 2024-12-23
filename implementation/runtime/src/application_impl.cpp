@@ -425,6 +425,7 @@ void application_impl::start() {
         {
             std::lock_guard<std::mutex> its_lock(dispatcher_mutex_);
             is_dispatching_ = true;
+            // 이렇게 thread를 생성한 순간 바로 실행이 됨
             auto its_main_dispatcher = std::make_shared<std::thread>(
                     &application_impl::main_dispatch, shared_from_this()
             );
@@ -435,7 +436,7 @@ void application_impl::start() {
             stop_thread_.join();
         }
         stop_thread_= std::thread(&application_impl::shutdown, shared_from_this());
-
+        // 이 전후에 네트워크에 영향을 미치는 건 도대체 누굽니까?!
         if (routing_)
             routing_->start();
 
@@ -953,7 +954,7 @@ void application_impl::register_availability_handler(service_t _service,
 void application_impl::register_availability_handler_unlocked(service_t _service,
         instance_t _instance, availability_state_handler_t _handler,
         major_version_t _major, minor_version_t _minor) {
-
+    // ST_REGISTERED일 때 handler에 등록되는 건 문제 같진 않은데..
     if (state_ == state_type_e::ST_REGISTERED) {
         available_t its_available;
         auto are_available = are_available_unlocked(its_available, _service, _instance, _major, _minor);
@@ -1783,11 +1784,12 @@ void application_impl::main_dispatch() {
 #endif
             ;
     std::unique_lock<std::mutex> its_lock(handlers_mutex_);
+    // 언제 false? 초기 생성 시, 이후 main_dispatch 스레드 생성 시 true, 이후 shutdown 할 때만 false
     while (is_dispatching_) {
         if (handlers_.empty() || !is_active_dispatcher(its_id)) {
-            // Cancel other waiting dispatcher
+            // 이 notify는 뭔 의미인지? Cancel other waiting dispatcher
             dispatcher_condition_.notify_all();
-            // Wait for new handlers to execute
+            // handlers_queue가 비었거나 active하지 않다면  Wait for new handlers to execute
             while (is_dispatching_ && (handlers_.empty() || !is_active_dispatcher(its_id))) {
                 dispatcher_condition_.wait(its_lock);
             }
@@ -1879,6 +1881,7 @@ std::shared_ptr<application_impl::sync_handler> application_impl::get_next_handl
         handlers_.pop_front();
 
         // Check handler
+        //  availability로 등록된 핸들러일 때
         if (its_next_handler->handler_type_ == handler_type_e::AVAILABILITY) {
             const std::pair<service_t, instance_t> its_si_pair = std::make_pair(
                     its_next_handler->service_id_,
@@ -1887,6 +1890,7 @@ std::shared_ptr<application_impl::sync_handler> application_impl::get_next_handl
             if (found_si != availability_handlers_.end()
                     && !found_si->second.empty()
                     && found_si->second.front() != its_next_handler) {
+                // 여기에 push_back을 한다는 건 무슨 의미이지
                 found_si->second.push_back(its_next_handler);
                 // There is a running availability handler for this service.
                 // Therefore, this one must wait...
@@ -1918,9 +1922,11 @@ void application_impl::reschedule_availability_handler(
         const std::pair<service_t, instance_t> its_si_pair = std::make_pair(
                 _handler->service_id_, _handler->instance_id_);
         auto found_si = availability_handlers_.find(its_si_pair);
+        // 있다면
         if (found_si != availability_handlers_.end()) {
             if (!found_si->second.empty()
                     && found_si->second.front() == _handler) {
+                // 맨 앞에 있다면 제거
                 found_si->second.pop_front();
 
                 // If there are other availability handlers pending, schedule
@@ -1941,6 +1947,7 @@ void application_impl::reschedule_availability_handler(
 void application_impl::invoke_handler(std::shared_ptr<sync_handler> &_handler) {
     const std::thread::id its_id = std::this_thread::get_id();
 
+    // make_shared로 sync_handler 구조체 생성, 얘는 함수가 아니니 실행되는 게 아님
     std::shared_ptr<sync_handler> its_sync_handler
         = std::make_shared<sync_handler>(_handler->service_id_,
             _handler->instance_id_, _handler->method_id_,
@@ -1948,6 +1955,7 @@ void application_impl::invoke_handler(std::shared_ptr<sync_handler> &_handler) {
             _handler->handler_type_);
 
     boost::asio::steady_timer its_dispatcher_timer(io_);
+    // max_dispatch_time_만큼 대기가 들어가는가? 그보단 콜백으로 its_dispatcher_timer가 끝났을 시 밑에를 실행시킴
     its_dispatcher_timer.expires_from_now(std::chrono::milliseconds(max_dispatch_time_));
     its_dispatcher_timer.async_wait([this, its_sync_handler](const boost::system::error_code &_error) {
         if (!_error) {
@@ -1963,6 +1971,7 @@ void application_impl::invoke_handler(std::shared_ptr<sync_handler> &_handler) {
                     if (dispatcher_mutex_.try_lock()) {
                         if (dispatchers_.size() < max_dispatchers_) {
                             if (is_dispatching_) {
+                                // 여기서도 dispatch를 또 하나?
                                 auto its_dispatcher = std::make_shared<std::thread>(
                                     std::bind(&application_impl::dispatch, shared_from_this()));
                                 dispatchers_[its_dispatcher->get_id()] = its_dispatcher;
@@ -2002,6 +2011,7 @@ void application_impl::invoke_handler(std::shared_ptr<sync_handler> &_handler) {
 
     while (is_dispatching_ ) {
         if (dispatcher_mutex_.try_lock()) {
+            // 실행 전에 lock 잡고 runnging_dispatchers에 insert, 실행 끝나고 다시 erase
             running_dispatchers_.insert(its_id);
             dispatcher_mutex_.unlock();
             break;
@@ -2011,6 +2021,11 @@ void application_impl::invoke_handler(std::shared_ptr<sync_handler> &_handler) {
 
     if (is_dispatching_) {
         try {
+            // 실제 핸들러 실행
+            // auto executed_time = std::chrono::high_resolution_clock::now();
+            // VSOMEIP_DEBUG << "handler executed at: " 
+            //     << std::chrono::duration_cast<std::chrono::microseconds>(executed_time.time_since_epoch()).count() 
+            //     << " μs";
             _handler->handler_();
         } catch (const std::exception &e) {
             VSOMEIP_ERROR << "application_impl::invoke_handler caught exception: "
@@ -2053,6 +2068,7 @@ bool application_impl::is_active_dispatcher(const std::thread::id &_id) const {
     while (is_dispatching_) {
         if (dispatcher_mutex_.try_lock()) {
             for (const auto &d : dispatchers_) {
+                // 그냥 for문 돌면서 검사. 
                 if (d.first != _id &&
                     running_dispatchers_.find(d.first) == running_dispatchers_.end() &&
                     elapsed_dispatchers_.find(d.first) == elapsed_dispatchers_.end()) {

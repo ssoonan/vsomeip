@@ -220,14 +220,13 @@ void routing_manager_impl::start() {
         its_netmask_or_prefix << "netmask:" << configuration_->get_netmask().to_string();
     else
         its_netmask_or_prefix << "prefix:" << configuration_->get_prefix();
-
+    // 이건 configuration에서 가져온 값 읽기만 하는 것
     VSOMEIP_INFO << "Client ["
             << std::hex << std::setw(4) << std::setfill('0')
             << get_client()
             << "] routes unicast:" << its_unicast.to_string()
             << ", "
             << its_netmask_or_prefix.str();
-
     netlink_connector_ = std::make_shared<netlink_connector>(
             host_->get_io(), configuration_->get_unicast_address(), its_multicast);
     netlink_connector_->register_net_if_changes_handler(
@@ -243,7 +242,9 @@ void routing_manager_impl::start() {
 
     if (stub_)
         stub_->start();
+    // 여기서 register가 되는군. 그러면 근데 network 세팅 이후 register 되는 게 맞지 않나? 저기는 말 그대로 핸들러 등록이고 실제 이벤트 발생 후에 갱신되는 게 아님
     host_->on_state(state_type_e::ST_REGISTERED);
+    // start_ip_routing();
 
     if (configuration_->log_version()) {
         std::lock_guard<std::mutex> its_lock(version_log_timer_mutex_);
@@ -578,7 +579,7 @@ void routing_manager_impl::request_service(client_t _client, service_t _service,
         << std::setw(4) << _service << "."
         << std::setw(4) << _instance << ":"
         << std::dec << int(_major) << "." << _minor << "]";
-
+    // 여기도 로컬 등록만 함
     routing_manager_base::request_service(_client,
             _service, _instance, _major, _minor);
     // 대체 언제 이게 갱신된다고~?
@@ -588,6 +589,7 @@ void routing_manager_impl::request_service(client_t _client, service_t _service,
         if (discovery_) {
             if (!configuration_->is_local_service(_service, _instance)) {
                 // Non local service instance ~> tell SD to find it!
+                // 여기에도 네트워크 작업은 없음. sd로 간다
                 discovery_->request_service(_service, _instance, _major, _minor,
                         DEFAULT_TTL);
             } else {
@@ -1193,7 +1195,15 @@ bool routing_manager_impl::send_via_sd(
     std::shared_ptr<endpoint> its_endpoint =
             ep_mgr_impl_->find_server_endpoint(_sd_port,
                     _target->is_reliable());
-
+    auto end_time = std::chrono::high_resolution_clock::now();
+    VSOMEIP_DEBUG << "right before sending offer: " 
+         << std::chrono::duration_cast<std::chrono::microseconds>(end_time.time_since_epoch()).count() 
+         << " μs";
+    // multicast receive 한 후 send 하기 전까지 걸리는 처리 시간
+    auto elapsed_ms = std::chrono::duration_cast<std::chrono::microseconds>(end_time - its_endpoint->arrived_time);
+    VSOMEIP_DEBUG << "processing time before sending offer: " 
+        << elapsed_ms.count()
+        << " μs";
     if (its_endpoint) {
 #ifdef USE_DLT
         if (tc_->is_sd_enabled()) {
@@ -1204,11 +1214,7 @@ bool routing_manager_impl::send_via_sd(
 
         }
 #endif
-        auto end_time = std::chrono::high_resolution_clock::now();
-        auto elapsed_ms = std::chrono::duration_cast<std::chrono::microseconds>(end_time - discovery_->start_time);
-        VSOMEIP_DEBUG << "processing time before send: " 
-         << elapsed_ms.count()
-         << " μs";
+
         return its_endpoint->send_to(_target, _data, _size);
     }
 
@@ -3763,7 +3769,7 @@ void routing_manager_impl::send_subscribe(client_t _client, service_t _service,
                 PENDING_SUBSCRIPTION_ID);
     }
 }
-
+// 얘는 실행하는 얘가 없는데?
 void routing_manager_impl::set_routing_state(routing_state_e _routing_state) {
     {
         std::lock_guard<std::mutex> its_lock(routing_state_mutex_);
@@ -3982,6 +3988,7 @@ void routing_manager_impl::on_net_interface_or_route_state_changed(
             if (!routing_running_) {
                 if(configuration_->is_sd_enabled()) {
                     if (sd_route_set_) {
+                        // 시작은 여기로 되는 게 맞음
                         start_ip_routing();
                     }
                 } else {

@@ -21,6 +21,7 @@ class endpoint {
 public:
     typedef std::function<void()> error_handler_t;
     typedef std::function<void(const std::shared_ptr<endpoint>&, service_t)> prepare_stop_handler_t;
+    std::chrono::high_resolution_clock::time_point arrived_time;
 
     virtual ~endpoint() {}
 

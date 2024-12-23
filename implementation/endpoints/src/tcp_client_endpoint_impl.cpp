@@ -144,10 +144,8 @@ void tcp_client_endpoint_impl::connect() {
     if (!its_error || its_error == boost::asio::error::already_open) {
         // Nagle algorithm off. 효율보단 속도를 위해
         socket_->set_option(ip::tcp::no_delay(true), its_error);
-        int quickack = 1;
-        setsockopt(socket_->native_handle(), IPPROTO_TCP, TCP_QUICKACK, &quickack, sizeof(int));
-        int user_timeout = 30;  // 단위: milliseconds
-        setsockopt(socket_->native_handle(), SOL_TCP, TCP_USER_TIMEOUT, &user_timeout, sizeof(int));
+        // int quickack = 1;
+        // setsockopt(socket_->native_handle(), IPPROTO_TCP, TCP_QUICKACK, &quickack, sizeof(int));
 
         if (its_error) {
             VSOMEIP_WARNING << "tcp_client_endpoint::connect: couldn't disable "
