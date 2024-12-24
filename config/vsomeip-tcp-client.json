@@ -1,5 +1,5 @@
 {
-    "unicast" : "192.168.100.56",
+    "unicast" : "192.168.196.27",
     "netmask" : "255.255.255.0",
     "logging" :
     {
@@ -47,7 +47,7 @@
         "repetitions_base_delay" : "200",
         "repetitions_max" : "3",
         "ttl" : "3",
-        "cyclic_offer_delay" : "2000",
-        "request_response_delay" : "0"
+        "cyclic_offer_delay" : "200000",
+        "request_response_delay" : "1"
     }
 }
